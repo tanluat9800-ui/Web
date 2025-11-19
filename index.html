@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web 5 Câu Hỏi + Pháo Hoa + Nhạc + Nền động</title>
+<style>
+    body {
+        margin: 0; padding: 0; overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        height: 100vh; position: relative;
+        background: black;
+    }
+    canvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1; }
+    .box {
+        background: rgba(255,255,255,0.95); border-radius: 12px; padding: 25px;
+        width: 350px; box-shadow: 0 0 20px rgba(0,0,0,0.3); text-align: center;
+        position: relative; z-index:1;
+    }
+    input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #aaa; }
+    button { width: 90%; padding: 12px; margin:5px 0; background-color:#3f5efb; border:none; color:white;
+        border-radius:6px; cursor:pointer; font-weight:bold; transition:0.2s;}
+    button:hover { background-color:#3148d6; }
+    p.message { font-weight:bold; color:red; }
+    .info-player { position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.9);
+        padding:10px 15px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2); font-weight:bold; z-index:2; }
+    .link-text { margin-top:10px; font-size:14px; }
+    .link-text button { width:auto; padding:5px 10px; font-size:14px; }
+    .question { font-weight:bold; color:#0077cc; margin:10px 0; }
+    .success { background:#fff3e0; color:#ff5722; font-size:22px; font-weight:bold;
+        padding:20px; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.3); animation: pop 0.5s ease-out; }
+    @keyframes pop { 0% {transform: scale(0.5); opacity:0;} 100% {transform: scale(1); opacity:1;} }
+    #fireworksCanvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; }
+    #musicButton { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); z-index:2; padding:10px 20px; border:none; border-radius:10px; background:#3f5efb; color:white; font-weight:bold; cursor:pointer;}
+    #musicButton:hover { background:#3148d6; }
+</style>
+</head>
+<body>
+
+<!-- Canvas nền tia sáng -->
+<canvas id="backgroundCanvas"></canvas>
+
+<!-- Nhạc nền YouTube -->
+<iframe id="bgMusicVideo"
+        width="0" height="0"
+        src="https://www.youtube.com/embed/ugNvbNNAYnc?enablejsapi=1&loop=1&playlist=ugNvbNNAYnc"
+        frameborder="0"
+        allow="autoplay"
+        style="display:none">
+</iframe>
+<button id="musicButton" onclick="playMusic()">Bật nhạc nền</button>
+
+<!-- Thông tin người chơi -->
+<div id="playerInfo" class="info-player" style="display:none;"></div>
+
+<!-- Menu Đăng Nhập -->
+<div id="loginBox" class="box">
+    <h2>Đăng Nhập</h2>
+    <input type="email" id="loginEmail" placeholder="Nhập email">
+    <input type="password" id="loginPassword" placeholder="Nhập mật khẩu">
+    <button onclick="loginUser()">Đăng Nhập</button>
+    <p id="loginMessage" class="message"></p>
+    <div class="link-text">BẠN KHÔNG CÓ TÀI KHOẢN? <button onclick="showRegister()">Đăng Ký</button></div>
+</div>
+
+<!-- Menu Đăng Ký -->
+<div id="registerBox" class="box" style="display:none;">
+    <h2>Đăng Ký Tài Khoản</h2>
+    <input type="email" id="registerEmail" placeholder="Nhập email">
+    <input type="password" id="registerPassword" placeholder="Nhập mật khẩu">
+    <p class="question">Câu hỏi mẹo: 1 + 1 = ?</p>
+    <input type="text" id="registerQuestion" placeholder="Nhập câu trả lời">
+    <button onclick="registerUser()">Đăng Ký</button>
+    <p id="registerMessage" class="message"></p>
+    <div class="link-text">Đã có tài khoản? <button onclick="showLogin()">Đăng Nhập</button></div>
+</div>
+
+<!-- 5 chức năng -->
+<div id="functionsBox" class="box" style="display:none;">
+    <h2>Chọn chức năng</h2>
+    <button onclick="askQuestion(1)">Câu hỏi ví dụ 1</button>
+    <button onclick="askQuestion(2)">Câu hỏi ví dụ 2</button>
+    <button onclick="askQuestion(3)">Câu hỏi ví dụ 3</button>
+    <button onclick="askQuestion(4)">Câu hỏi ví dụ 4</button>
+    <button onclick="showCongrats()">Câu hỏi ví dụ 5</button>
+    <p id="functionQuestion" class="question"></p>
+    <input type="text" id="functionAnswer" placeholder="Nhập kết quả">
+    <button onclick="checkFunctionAnswer()">Xác nhận</button>
+    <p id="functionMessage" class="message"></p>
+</div>
+
+<!-- Bảng chúc mừng -->
+<div id="congratsBox" class="box" style="display:none;">
+    <div class="success">🎉 CHÚC MỪNG BẠN ĐÃ TRẢ LỜI ĐÚNG TẤT CẢ 🎉</div>
+</div>
+
+<!-- Canvas pháo hoa -->
+<canvas id="fireworksCanvas"></canvas>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+/*---------------- Nền tia sáng ----------------*/
+const bgCanvas = document.getElementById('backgroundCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+function resizeBackground(){ bgCanvas.width=window.innerWidth; bgCanvas.height=window.innerHeight; }
+window.addEventListener('resize', resizeBackground); resizeBackground();
+const stars=[]; for(let i=0;i<100;i++){ stars.push({x:Math.random()*bgCanvas.width, y:Math.random()*bgCanvas.height, length:Math.random()*80+20, speed:Math.random()*2+0.5, angle:Math.random()*2*Math.PI}); }
+function animateBackground(){ bgCtx.fillStyle="rgba(0,0,0,0.3)"; bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height); stars.forEach(s=>{ bgCtx.beginPath(); bgCtx.strokeStyle="white"; bgCtx.lineWidth=1; const endX=s.x+s.length*Math.cos(s.angle); const endY=s.y+s.length*Math.sin(s.angle); bgCtx.moveTo(s.x,s.y); bgCtx.lineTo(endX,endY); bgCtx.stroke(); s.x+=Math.cos(s.angle)*s.speed; s.y+=Math.sin(s.angle)*s.speed; if(s.x<0||s.x>bgCanvas.width||s.y<0||s.y>bgCanvas.height){ s.x=Math.random()*bgCanvas.width; s.y=Math.random()*bgCanvas.height; s.length=Math.random()*80+20; s.speed=Math.random()*2+0.5; s.angle=Math.random()*2*Math.PI; } }); requestAnimationFrame(animateBackground); }
+animateBackground();
+
+/*---------------- Nhạc YouTube ----------------*/
+let player;
+function onYouTubeIframeAPIReady(){ player = new YT.Player('bgMusicVideo'); }
+function playMusic(){ if(player) player.playVideo(); document.getElementById('musicButton').style.display='none'; }
+
+/*---------------- Đăng ký/Đăng nhập ----------------*/
+let savedEmail='', savedPassword='', verified=false;
+function showRegister(){ document.getElementById('loginBox').style.display='none'; document.getElementById('registerBox').style.display='block'; }
+function showLogin(){ document.getElementById('registerBox').style.display='none'; document.getElementById('loginBox').style.display='block'; }
+function registerUser(){
+    const email=document.getElementById('registerEmail').value;
+    const password=document.getElementById('registerPassword').value;
+    const answer=document.getElementById('registerQuestion').value;
+    if(email&&password){ if(answer==='3'){ savedEmail=email; savedPassword=password; verified=true; alert("Đăng ký thành công!"); showLogin(); } else { alert("Câu trả lời sai, thử lại!"); } }
+    else { document.getElementById('registerMessage').innerText="Vui lòng nhập đầy đủ"; }
+}
+function loginUser(){
+    const email=document.getElementById('loginEmail').value;
+    const password=document.getElementById('loginPassword').value;
+    if(email===savedEmail&&password===savedPassword&&verified){
+        document.getElementById('loginBox').style.display='none';
+        document.getElementById('functionsBox').style.display='block';
+        const info=document.getElementById('playerInfo'); info.style.display='block'; info.innerText="Người chơi: "+savedEmail;
+        alert("Đăng nhập thành công!");
+    } else { document.getElementById('loginMessage').innerText="Thông tin không chính xác hoặc chưa đăng ký"; }
+}
+
+/*---------------- 5 câu hỏi ----------------*/
+let currentFunction=0;
+function askQuestion(num){ currentFunction=num; document.getElementById('functionAnswer').value=''; document.getElementById('functionMessage').innerText=''; 
+let questionText=''; switch(num){ case 1: questionText='1 quả táo cộng 2 quả táo bằng mấy?'; break; case 2: questionText='10 + 10 × 2 = ?'; break; case 3: questionText='29 + 56 + 29 × 3 = ?'; break; case 4: questionText='1 + 1 + 2 + 3 + 4 + 5 = ?'; break; } 
+document.getElementById('functionQuestion').innerText=questionText; }
+function checkFunctionAnswer(){ const ans=document.getElementById('functionAnswer').value; let correct=false; switch(currentFunction){ case 1: correct=(ans==='5'); break; case 2: correct=(ans==='1'); break; case 3: correct=(ans==='1000'); break; case 4: correct=(ans==='100'); break; } document.getElementById('functionMessage').innerText = correct?'✅ Bạn trả lời đúng!':'❌ Sai rồi, thử lại!'; }
+
+/*---------------- Pháo hoa ----------------*/
+const canvas=document.getElementById('fireworksCanvas'); const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth; canvas.height=window.innerHeight; window.addEventListener('resize',()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;});
+let fireworks=[],particles=[],animating=false;
+function random(min,max){ return Math.random()*(max-min)+min; }
+class Firework{constructor(x,y){this.x=canvas.width/2;this.y=canvas.height;this.targetX=x;this.targetY=y;this.exploded=false;}
+update(){const dx=this.targetX-this.x,dy=this.targetY-this.y;this.x+=dx*0.1;this.y+=dy*0.1;if(Math.abs(dx)<2&&Math.abs(dy)<2&&!this.exploded){this.explode();this.exploded=true;}}
+explode(){for(let i=0;i<100;i++){particles.push(new Particle(this.x,this.y));}}
+draw(){ctx.fillStyle='white';ctx.fillRect(this.x,this.y,2,2);}}
+class Particle{constructor(x,y){this.x=x;this.y=y;this.vx=random(-5,5);this.vy=random(-5,5);this.alpha=1;this.color=`hsl(${random(0,360)},100%,50%)`;}
+update(){this.x+=this.vx;this.y+=this.vy;this.alpha-=0.02;}
+draw(){ctx.fillStyle=this.color;ctx.globalAlpha=this.alpha;ctx.fillRect(this.x,this.y,2,2);ctx.globalAlpha=1;}}
+function startFireworks(){animating=true;for(let i=0;i<5;i++){fireworks.push(new Firework(random(100,canvas.width-100),random(100,canvas.height/2)));}animate();}
+function stopFireworks(){animating=false;fireworks=[];particles=[];}
+function animate(){if(!animating) return; ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(0,0,canvas.width,canvas.height); fireworks.forEach(f=>{f.update();f.draw();}); particles.forEach(p=>{p.update();p.draw();}); particles=particles.filter(p=>p.alpha>0); requestAnimationFrame(animate);}
+function showCongrats(){ document.getElementById('functionsBox').style.display='none'; document.getElementById('congratsBox').style.display='block'; startFireworks(); setTimeout(()=>{ stopFireworks(); document.getElementById('congratsBox').style.display='none'; document.getElementById('functionsBox').style.display='block'; },3000);}
+</script>
+
+</body>
+</html>
