@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHUCNGUYEN X MUSIC REMIX</title>
+<style>
+body {
+    margin:0; padding:0;
+    height:100vh; background-color:#000;
+    font-family:Arial,sans-serif;
+    color:#fff; overflow:hidden;
+}
+/* Overlay xác minh tuổi */
+#ageOverlay {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.95);
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    z-index:9999; text-align:center;
+}
+#ageOverlay h2 {
+    font-size:2rem; margin-bottom:30px;
+}
+#ageSlider {
+    width:300px;
+}
+#enterBtn {
+    margin-top:20px; padding:10px 30px; font-size:18px; cursor:pointer;
+    border:none; border-radius:10px;
+    background: linear-gradient(45deg,#00f260,#0575e6);
+    color:#fff; font-weight:bold;
+}
+/* Page content */
+#mainContent { display:none; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
+h1 {
+    font-size:2.5rem; letter-spacing:4px;
+    text-align:center; margin-bottom:30px;
+    border:2px solid #fff; padding:10px 30px;
+    border-radius:20px;
+    box-shadow:0 0 20px #ff4b2b,0 0 40px #00f260;
+    z-index:2;
+}
+button {
+    margin:10px; padding:20px 50px; font-size:20px;
+    border:none; border-radius:15px; cursor:pointer;
+    background: linear-gradient(45deg, #ff416c, #ff4b2b);
+    color:#fff; font-weight:bold;
+    box-shadow:0 4px 15px rgba(255,75,43,0.5);
+    transition: all 0.3s ease;
+    z-index:2;
+    position: relative;
+}
+button:hover { transform: scale(1.1); box-shadow:0 6px 20px rgba(255,75,43,0.8);}
+.playing { background: linear-gradient(45deg,#00f260,#0575e6); box-shadow:0 6px 20px rgba(0,242,96,0.8); }
+canvas { position:absolute; bottom:0; width:100%; height:100%; z-index:1; display:block;}
+</style>
+</head>
+<body>
+
+<!-- Xác minh tuổi -->
+<div id="ageOverlay">
+    <h2>Vui lòng xác nhận tuổi</h2>
+    <input type="range" id="ageSlider" min="0" max="100" value="0">
+    <p id="ageValue">Tuổi: 0</p>
+    <button id="enterBtn" disabled>Vào Web</button>
+</div>
+
+<!-- Nội dung chính -->
+<div id="mainContent">
+    <h1>PHUCNGUYEN X MUSIC REMIX</h1>
+
+    <button id="btnFellDown">FELL DOWN</button>
+    <button id="btnTrackMaker">TRACKMAKER</button>
+    <button id="btnDJBar">DJ BAR</button>
+    <button id="btnFullJ97">FULL J97</button>
+    <button id="btnPhonk">PHONK</button>
+
+    <canvas id="waveCanvas"></canvas>
+</div>
+
+<script>
+const ageOverlay = document.getElementById('ageOverlay');
+const ageSlider = document.getElementById('ageSlider');
+const ageValue = document.getElementById('ageValue');
+const enterBtn = document.getElementById('enterBtn');
+const mainContent = document.getElementById('mainContent');
+
+// Kiểm tra localStorage
+if(localStorage.getItem('isAdult') === 'true'){
+    ageOverlay.style.display = 'none';
+    mainContent.style.display = 'flex';
+}
+
+ageSlider.addEventListener('input', ()=>{
+    ageValue.textContent = `Tuổi: ${ageSlider.value}`;
+    enterBtn.disabled = (ageSlider.value < 18);
+});
+
+enterBtn.addEventListener('click', ()=>{
+    localStorage.setItem('isAdult','true');
+    ageOverlay.style.display = 'none';
+    mainContent.style.display = 'flex';
+});
+
+// --------- CODE NHẠC VÀ VISUALIZER ---------
+const btnFellDown = document.getElementById('btnFellDown');
+const btnTrackMaker = document.getElementById('btnTrackMaker');
+const btnDJBar = document.getElementById('btnDJBar');
+const btnFullJ97 = document.getElementById('btnFullJ97');
+const btnPhonk = document.getElementById('btnPhonk');
+
+const tracks = [
+    {name: 'FELL DOWN', url: 'https://raw.githubusercontent.com/phuc2001111-dev/phucnguyen-hub/61f6d8c6cc849618d595c629a4f9d0b1cfd1535e/www-y2mate.vip%20-%20FELL%20DOWN%20REMIX%20-%20MONTAGEM%20NH%E1%BA%A0C%20REMIX%20C%C4%82NG%20NH%E1%BA%A4T%202025%20-%20HOT%20TIKTOK%20MUSIC%20REMIX%202025%20(320%20KBps).mp3', button: btnFellDown},
+    {name: 'TRACKMAKER', url: 'https://raw.githubusercontent.com/phuc2001111-dev/phucnguyen-hub/5796d3cb874ff530df774053431d064d673d80e6/www-y2mate.vip%20-%20%E5%AE%A4%E5%86%85%E7%B3%BB%E7%9A%84TrackMaker%20Melodic%20Minor%20hanser%20%E7%A2%87%E7%9C%9F%E5%97%A3%20%E9%99%8D%E8%B0%83%20Hot%20Tiktok%20Douyin%202025%20(320%20KBps)%20(1).mp3', button: btnTrackMaker},
+    {name: 'DJ BAR', url: 'https://files.catbox.moe/2exit9.mp3', button: btnDJBar},
+    {name: 'FULL J97', url: 'https://files.catbox.moe/7xsp68.mp3', button: btnFullJ97},
+    {name: 'PHONK', url: 'https://files.catbox.moe/4ua8l7.mp3', button: btnPhonk}
+];
+
+const canvas = document.getElementById('waveCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let audioCtx = null;
+let analyser = null;
+let source = null;
+let gainNode = null;
+let animationId = null;
+let currentAudio = null;
+let currentIndex = 0;
+
+let gradientOffset = 0;
+
+function stopAudio() {
+    if(currentAudio){
+        currentAudio.pause();
+        currentAudio.src = '';
+    }
+    if(source) source.disconnect();
+    if(gainNode) gainNode.disconnect();
+    if(analyser) analyser.disconnect();
+    if(animationId) cancelAnimationFrame(animationId);
+    tracks.forEach(t => t.button.classList.remove('playing'));
+}
+
+function playTrack(index){
+    stopAudio();
+    const track = tracks[index];
+
+    currentAudio = new Audio(track.url);
+    currentAudio.crossOrigin = "anonymous";
+
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+
+    source = audioCtx.createMediaElementSource(currentAudio);
+
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 2;
+
+    source.connect(gainNode);
+    gainNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    currentAudio.play();
+    track.button.classList.add('playing');
+    currentIndex = index;
+
+    currentAudio.onended = () => playTrack((currentIndex+1)%tracks.length);
+
+    visualize();
+}
+
+tracks.forEach((t, idx) => {
+    t.button.addEventListener('click', ()=>playTrack(idx));
+});
+
+function visualize(){
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    let hueShift = 0;
+
+    function draw(){
+        analyser.getByteFrequencyData(dataArray);
+
+        gradientOffset += 0.5;
+        const gradient = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+        gradient.addColorStop(0, `hsl(${gradientOffset % 360}, 60%, 10%)`);
+        gradient.addColorStop(1, `hsl(${(gradientOffset+60) % 360}, 80%, 5%)`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        const barWidth = (canvas.width / bufferLength)*2;
+        let x = 0;
+        hueShift += 1;
+
+        for(let i=0;i<bufferLength;i++){
+            const v = dataArray[i]/255;
+            let barHeight = v*canvas.height*0.8;
+            if(i<10) barHeight *=1.5;
+
+            const hue = (i*2 + hueShift) % 360;
+            ctx.fillStyle = `hsl(${hue},100%,50%)`;
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.fillRect(x, canvas.height-barHeight, barWidth, barHeight);
+            x += barWidth + 1;
+        }
+
+        animationId = requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
